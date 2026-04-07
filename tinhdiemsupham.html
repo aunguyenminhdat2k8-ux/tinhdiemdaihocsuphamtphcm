@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>TÍNH ĐIỂM XÉT TUYỂN ĐẠI HỌC SƯ PHẠM THÀNH PHỐ HỒ CHÍ MINH</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+body{
+font-family:Arial;
+background:linear-gradient(135deg,#1e3c72,#2a5298,#00c6ff);
+padding:25px;
+}
+
+.container{
+max-width:950px;
+margin:auto;
+background:white;
+padding:30px;
+border-radius:16px;
+box-shadow:0 15px 35px rgba(0,0,0,0.25);
+}
+
+h1{
+text-align:center;
+color:#1e3a8a;
+margin-bottom:25px;
+}
+
+label{
+font-weight:bold;
+}
+
+input,select{
+width:100%;
+padding:10px;
+margin-top:6px;
+margin-bottom:12px;
+border-radius:6px;
+border:1px solid #ccc;
+}
+
+button{
+width:100%;
+padding:14px;
+background:#2563eb;
+color:white;
+font-size:17px;
+border:none;
+border-radius:8px;
+cursor:pointer;
+}
+
+button:hover{
+background:#1d4ed8;
+}
+
+.grid6{
+display:grid;
+grid-template-columns:repeat(2,1fr);
+gap:10px;
+}
+
+.result{
+margin-top:25px;
+padding:20px;
+border-radius:12px;
+font-size:17px;
+line-height:1.8;
+}
+
+.success{
+background:#dcfce7;
+border-left:6px solid #16a34a;
+}
+
+.warning{
+background:#fef9c3;
+border-left:6px solid #ca8a04;
+}
+
+.fail{
+background:#fee2e2;
+border-left:6px solid #dc2626;
+}
+
+.progress{
+width:100%;
+height:18px;
+background:#e5e7eb;
+border-radius:20px;
+overflow:hidden;
+margin-top:10px;
+}
+
+.bar{
+height:100%;
+background:#2563eb;
+}
+
+.detail{
+margin-top:15px;
+background:#f1f5ff;
+padding:12px;
+border-radius:8px;
+font-size:15px;
+}
+
+.footer{
+text-align:center;
+margin-top:25px;
+color:gray;
+}
+
+canvas{
+margin-top:25px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>TÍNH ĐIỂM XÉT TUYỂN ĐẠI HỌC SƯ PHẠM THÀNH PHỐ HỒ CHÍ MINH</h1>
+
+<label>Chọn hình thức xét tuyển</label>
+<select id="method" onchange="changeMethod()">
+<option value="thpt">Xét điểm thi THPT</option>
+<option value="dgnl">Xét điểm ĐGNL chuyên biệt + học bạ</option>
+</select>
+
+<div id="thpt">
+
+<label>Điểm môn 1</label>
+<input type="number" id="m1">
+
+<label>Điểm môn 2</label>
+<input type="number" id="m2">
+
+<label>Điểm môn 3</label>
+<input type="number" id="m3">
+
+</div>
+
+<div id="dgnl" style="display:none">
+
+<label>Điểm môn chính ĐGNL</label>
+<input type="number" id="mc">
+
+<label>Môn thứ hai (6 học kỳ)</label>
+
+<div class="grid6">
+<input type="number" id="a1" placeholder="HK1 lớp 10">
+<input type="number" id="a2" placeholder="HK2 lớp 10">
+<input type="number" id="a3" placeholder="HK1 lớp 11">
+<input type="number" id="a4" placeholder="HK2 lớp 11">
+<input type="number" id="a5" placeholder="HK1 lớp 12">
+<input type="number" id="a6" placeholder="HK2 lớp 12">
+</div>
+
+<label>Môn thứ ba (6 học kỳ)</label>
+
+<div class="grid6">
+<input type="number" id="b1" placeholder="HK1 lớp 10">
+<input type="number" id="b2" placeholder="HK2 lớp 10">
+<input type="number" id="b3" placeholder="HK1 lớp 11">
+<input type="number" id="b4" placeholder="HK2 lớp 11">
+<input type="number" id="b5" placeholder="HK1 lớp 12">
+<input type="number" id="b6" placeholder="HK2 lớp 12">
+</div>
+
+</div>
+
+<label>Điểm ưu tiên</label>
+<input type="number" id="ut">
+
+<label>Điểm mục tiêu</label>
+<input type="number" id="target">
+
+<button onclick="calculate()">TÍNH ĐIỂM</button>
+
+<div id="result"></div>
+
+<canvas id="chart"></canvas>
+
+<div class="footer">
+© aunguyenminhdat
+</div>
+
+</div>
+
+<script>
+
+let chart
+
+function changeMethod(){
+
+let method=document.getElementById("method").value
+
+document.getElementById("thpt").style.display=
+method==="thpt"?"block":"none"
+
+document.getElementById("dgnl").style.display=
+method==="dgnl"?"block":"none"
+
+}
+
+function getList(prefix){
+
+return [
+prefix+"1",
+prefix+"2",
+prefix+"3",
+prefix+"4",
+prefix+"5",
+prefix+"6"
+]
+
+}
+
+function readScores(ids){
+
+let sum=0
+let count=0
+let missing=[]
+
+ids.forEach(id=>{
+
+let v=parseFloat(document.getElementById(id).value)
+
+if(!isNaN(v)){
+sum+=v
+count++
+}else{
+missing.push(id)
+}
+
+})
+
+return {sum,count,missing}
+
+}
+
+function hkName(id){
+
+let map={
+"a1":"HK1 lớp 10",
+"a2":"HK2 lớp 10",
+"a3":"HK1 lớp 11",
+"a4":"HK2 lớp 11",
+"a5":"HK1 lớp 12",
+"a6":"HK2 lớp 12",
+"b1":"HK1 lớp 10",
+"b2":"HK2 lớp 10",
+"b3":"HK1 lớp 11",
+"b4":"HK2 lớp 11",
+"b5":"HK1 lớp 12",
+"b6":"HK2 lớp 12"
+}
+
+return map[id]
+
+}
+
+function calculate(){
+
+let method=document.getElementById("method").value
+let ut=parseFloat(document.getElementById("ut").value)||0
+let target=parseFloat(document.getElementById("target").value)||0
+
+let total=0
+let detail=""
+let suggest=""
+
+if(method==="thpt"){
+
+let m1=parseFloat(document.getElementById("m1").value)||0
+let m2=parseFloat(document.getElementById("m2").value)||0
+let m3=parseFloat(document.getElementById("m3").value)||0
+
+let sum=m1+m2+m3
+
+total=sum+ut
+
+detail+=`Tổng điểm 3 môn: ${m1}+${m2}+${m3} = <b>${sum}</b><br>`
+detail+=`Điểm ưu tiên: ${ut}<br>`
+
+if(target>0){
+
+let need=target-ut
+let each=need/3
+
+suggest=`📌 Để đạt mục tiêu, mỗi môn nên khoảng <b>${each.toFixed(2)}</b> điểm.`
+
+}
+
+}else{
+
+let mc=parseFloat(document.getElementById("mc").value)||0
+
+let a=readScores(getList("a"))
+let b=readScores(getList("b"))
+
+let avgA=a.count? a.sum/a.count : 0
+let avgB=b.count? b.sum/b.count : 0
+
+let raw=(0.5*mc + 0.25*avgA + 0.25*avgB)
+
+total=raw*3 + ut
+
+detail+=`Điểm ĐGNL: ${mc}<br>`
+detail+=`TB môn 2: ${avgA.toFixed(2)}<br>`
+detail+=`TB môn 3: ${avgB.toFixed(2)}<br>`
+
+if(target>0){
+
+let needRaw=(target-ut)/3
+
+if(mc===0){
+
+let required=(needRaw-0.25*avgA-0.25*avgB)/0.5
+
+suggest+=`📌 Điểm ĐGNL cần đạt khoảng <b>${required.toFixed(2)}</b><br>`
+
+}
+
+if(a.missing.length>0){
+
+let requiredAvg=(needRaw-0.5*mc-0.25*avgB)/0.25
+
+let neededTotal=requiredAvg*6
+let remain=neededTotal-a.sum
+
+let each=remain/a.missing.length
+
+suggest+=`📌 Môn 2 cần đạt khoảng <b>${each.toFixed(2)}</b> ở các học kỳ còn thiếu:<br>`
+
+a.missing.forEach(id=>{
+suggest+=`- ${hkName(id)}<br>`
+})
+
+}
+
+if(b.missing.length>0){
+
+let requiredAvg=(needRaw-0.5*mc-0.25*avgA)/0.25
+
+let neededTotal=requiredAvg*6
+let remain=neededTotal-b.sum
+
+let each=remain/b.missing.length
+
+suggest+=`📌 Môn 3 cần đạt khoảng <b>${each.toFixed(2)}</b> ở các học kỳ còn thiếu:<br>`
+
+b.missing.forEach(id=>{
+suggest+=`- ${hkName(id)}<br>`
+})
+
+}
+
+}
+
+}
+
+total=Math.round(total*100)/100
+
+let percent= target>0 ? (total/target*100) : 0
+
+let statusClass="warning"
+let message=""
+
+if(target>0){
+
+let diff=(total-target).toFixed(2)
+
+if(total>=target){
+
+statusClass="success"
+message=`🎉 Bạn đã vượt mục tiêu ${Math.abs(diff)} điểm`
+
+}else{
+
+statusClass="fail"
+message=`Bạn còn thiếu ${Math.abs(diff)} điểm để đạt mục tiêu`
+
+}
+
+}
+
+document.getElementById("result").innerHTML=
+
+`<div class="result ${statusClass}">
+
+<b>Điểm xét tuyển của bạn: ${total}</b><br>
+${message}<br>
+${suggest}
+
+<div class="progress">
+<div class="bar" style="width:${percent}%"></div>
+</div>
+
+<div class="detail">
+<b>Phân tích chi tiết:</b><br>
+${detail}
+</div>
+
+</div>`
+
+drawChart(total,target)
+
+}
+
+function drawChart(score,target){
+
+let ctx=document.getElementById("chart")
+
+if(chart){
+chart.destroy()
+}
+
+chart=new Chart(ctx,{
+type:"bar",
+data:{
+labels:["Điểm của bạn","Điểm mục tiêu"],
+datasets:[{
+data:[score,target],
+backgroundColor:["#3b82f6","#ef4444"]
+}]
+},
+options:{responsive:true}
+})
+
+}
+
+</script>
+
+</body>
+</html>
